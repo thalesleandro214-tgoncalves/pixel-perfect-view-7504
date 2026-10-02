@@ -1,24 +1,159 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { cpfToEmail, formatCpf, isValidCpf } from "@/lib/cpf";
+import { getSetupStatus, setupDemoAccounts } from "@/lib/admin.functions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DemoBadge } from "@/components/portal/bits";
+import warehouse from "@/assets/warehouse.jpg";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Entrar · Portal de Produtividade Logística" },
+      { name: "description", content: "Acesse com seu CPF e senha para ver sua produtividade do dia." },
+      { property: "og:title", content: "Entrar · Portal de Produtividade Logística" },
+      { property: "og:description", content: "Acesse com seu CPF e senha para ver sua produtividade do dia." },
+    ],
+  }),
+  component: Login,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Login() {
+  const { session, role, loading } = useAuth();
+  const navigate = useNavigate();
+  const [cpf, setCpf] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
+  const statusFn = useServerFn(getSetupStatus);
+  const setupFn = useServerFn(setupDemoAccounts);
+  const status = useQuery({ queryKey: ["setup-status"], queryFn: () => statusFn() });
+
+  useEffect(() => {
+    if (!loading && session && role) navigate({ to: role === "admin" ? "/admin" : "/app", replace: true });
+  }, [loading, session, role, navigate]);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!isValidCpf(cpf)) return toast.error("CPF inválido. Confira os números.");
+    if (password.length < 6) return toast.error("Senha deve ter pelo menos 6 caracteres.");
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithPassword({ email: cpfToEmail(cpf), password });
+    setBusy(false);
+    if (error) {
+      toast.error(/banned/i.test(error.message) ? "Usuário inativo. Procure seu gestor." : "CPF ou senha incorretos.");
+    }
+  };
+
+  const setup = async () => {
+    setBusy(true);
+    try {
+      const r = await setupFn();
+      toast.success(r.message);
+      status.refetch();
+    } catch {
+      toast.error("Não foi possível criar as contas.");
+    }
+    setBusy(false);
+  };
+
+  const fill = (c: string, p: string) => {
+    setCpf(formatCpf(c));
+    setPassword(p);
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+      <div className="relative hidden overflow-hidden lg:block">
+        <img src={warehouse} alt="Centro de distribuição de bebidas" width={1024} height={1280} className="absolute inset-0 size-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-deep/95 via-primary-deep/40 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-12 text-primary-foreground">
+          <div className="stripe-top mb-6 h-1 w-40 opacity-90" style={{ background: "repeating-linear-gradient(90deg, var(--primary-foreground) 0 16px, transparent 16px 28px)" }} />
+          <h2 className="num-display text-6xl uppercase">Cada caixa<br />conta.</h2>
+          <p className="mt-4 max-w-sm text-sm opacity-85">Sua produtividade do dia, do mês e sua meta — em um só lugar.</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col bg-background">
+        <div className="bg-wave relative px-6 pb-16 pt-10 text-primary-foreground lg:hidden">
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-80">Brasal · Logística</div>
+          <h1 className="num-display mt-3 text-5xl uppercase">Portal de<br />Produtividade</h1>
+        </div>
+
+        <div className="-mt-8 flex flex-1 items-start justify-center px-4 pb-10 lg:mt-0 lg:items-center">
+          <div className="glass shadow-card relative w-full max-w-sm overflow-hidden p-6 rise">
+            <div className="stripe-top absolute inset-x-0 top-0 h-1" />
+            <div className="hidden lg:block">
+              <div className="label-mono">Brasal · Logística</div>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight">Portal de Produtividade</h1>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground lg:mt-2">Entre com seu CPF e senha.</p>
+
+            <form onSubmit={submit} className="mt-6 space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cpf">CPF</Label>
+                <Input id="cpf" inputMode="numeric" autoComplete="username" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(formatCpf(e.target.value))} className="h-12 font-mono text-base" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pw">Senha</Label>
+                <div className="relative">
+                  <Input id="pw" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 pr-11 text-base" />
+                  <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="Mostrar senha">
+                    {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
+                {busy && <Loader2 className="size-4 animate-spin" />} Entrar
+              </Button>
+              <button type="button" onClick={() => setForgot(true)} className="w-full text-center text-sm text-primary hover:underline">
+                Esqueci minha senha
+              </button>
+            </form>
+
+            <div className="mt-6 border-t pt-4">
+              <div className="mb-3 flex justify-center"><DemoBadge /></div>
+              {status.data?.needsSetup ? (
+                <Button variant="outline" className="w-full" disabled={busy} onClick={setup}>
+                  Ativar contas de demonstração
+                </Button>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 text-left">
+                  <button onClick={() => fill("52998224725", "demo1234")} className="rounded-lg bg-muted p-2.5 hover:bg-accent">
+                    <div className="label-mono">Auxiliar</div>
+                    <div className="font-mono text-[11px]">529.982.247-25</div>
+                  </button>
+                  <button onClick={() => fill("11144477735", "admin1234")} className="rounded-lg bg-muted p-2.5 hover:bg-accent">
+                    <div className="label-mono">Gestor</div>
+                    <div className="font-mono text-[11px]">111.444.777-35</div>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={forgot} onOpenChange={setForgot}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Esqueceu a senha?</DialogTitle>
+            <DialogDescription>
+              Procure seu gestor ou o administrador do portal. Ele pode criar uma nova senha para você em poucos segundos.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
