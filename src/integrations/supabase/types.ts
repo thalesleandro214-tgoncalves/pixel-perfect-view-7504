@@ -14,16 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      colaboradores: {
+        Row: {
+          cpf: string
+          created_at: string
+          demo: boolean
+          equipe: string
+          funcao: string
+          id: string
+          matricula: string | null
+          nome: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          demo?: boolean
+          equipe?: string
+          funcao?: string
+          id?: string
+          matricula?: string | null
+          nome: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          demo?: boolean
+          equipe?: string
+          funcao?: string
+          id?: string
+          matricula?: string | null
+          nome?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      configuracoes: {
+        Row: {
+          bonus_percentual_acima_meta: number
+          id: number
+          meta_caixas_hora: number
+          tolerancia_meta: number
+          updated_at: string
+          valor_por_caixa: number
+        }
+        Insert: {
+          bonus_percentual_acima_meta?: number
+          id?: number
+          meta_caixas_hora?: number
+          tolerancia_meta?: number
+          updated_at?: string
+          valor_por_caixa?: number
+        }
+        Update: {
+          bonus_percentual_acima_meta?: number
+          id?: number
+          meta_caixas_hora?: number
+          tolerancia_meta?: number
+          updated_at?: string
+          valor_por_caixa?: number
+        }
+        Relationships: []
+      }
+      produtividade: {
+        Row: {
+          caixas_por_hora: number
+          caixas_produzidas: number
+          colaborador_id: string
+          created_at: string
+          data: string
+          horas_trabalhadas: number
+          id: string
+          valor_gerado: number
+        }
+        Insert: {
+          caixas_por_hora?: number
+          caixas_produzidas: number
+          colaborador_id: string
+          created_at?: string
+          data: string
+          horas_trabalhadas: number
+          id?: string
+          valor_gerado?: number
+        }
+        Update: {
+          caixas_por_hora?: number
+          caixas_produzidas?: number
+          colaborador_id?: string
+          created_at?: string
+          data?: string
+          horas_trabalhadas?: number
+          id?: string
+          valor_gerado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtividade_colaborador_id_fkey"
+            columns: ["colaborador_id"]
+            isOneToOne: false
+            referencedRelation: "colaboradores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      minha_posicao_ranking: {
+        Args: { _fim: string; _inicio: string }
+        Returns: {
+          posicao: number
+          total: number
+        }[]
+      }
+      recalcular_produtividade: { Args: never; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "auxiliar"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +288,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "auxiliar"],
+    },
   },
 } as const
