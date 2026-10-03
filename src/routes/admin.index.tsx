@@ -121,7 +121,7 @@ function AdminHome() {
             <ResponsiveContainer width="100%" height={Math.max(200, ranking.length * 28)}>
               <BarChart data={ranking.map((r) => ({ n: r.colab.nome.split(" ")[0], v: +r.cxh.toFixed(1), s: goalStatus(r.cxh, cfg) }))} layout="vertical" margin={{ left: 0, right: 16 }}>
                 <XAxis type="number" tick={axis} tickLine={false} axisLine={false} domain={[0, "dataMax + 10"]} />
-                <YAxis type="category" dataKey="n" tick={{ ...axis, fontSize: 11 }} width={70} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="n" tick={{ ...axis, fontSize: 11 }} width={70} interval={0} tickLine={false} axisLine={false} />
                 <ReferenceLine x={meta} stroke="var(--foreground)" strokeDasharray="4 4" strokeOpacity={0.4} />
                 <Tooltip formatter={(v: number) => [`${v} cx/h`, "Média"]} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
                 <Bar dataKey="v" radius={[0, 4, 4, 0]}>
