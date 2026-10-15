@@ -5,18 +5,6 @@ import { monthRange } from "./format";
 
 export type Prod = Tables<"produtividade">;
 export type Colab = Tables<"colaboradores">;
-export type Config = Tables<"configuracoes">;
-
-export function useConfig() {
-  return useQuery({
-    queryKey: ["config"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("configuracoes").select("*").eq("id", 1).single();
-      if (error) throw error;
-      return data;
-    },
-  });
-}
 
 export function useMe(userId?: string) {
   return useQuery({
@@ -60,31 +48,30 @@ export function useMyRank(inicio: string, fim: string, enabled = true) {
   });
 }
 
-export function summarize(rows: Pick<Prod, "caixas_produzidas" | "horas_trabalhadas" | "caixas_por_hora" | "valor_gerado">[]) {
+/** Aggregates over official rows. Payment/accumulated/average come straight from the base (never recomputed with tariffs). */
+export function summarize(rows: Prod[]) {
+  const sorted = [...rows].sort((a, b) => a.data.localeCompare(b.data));
+  const last = sorted[sorted.length - 1];
   const dias = rows.length;
   const caixas = rows.reduce((s, r) => s + r.caixas_produzidas, 0);
-  const horas = rows.reduce((s, r) => s + Number(r.horas_trabalhadas), 0);
-  const valor = rows.reduce((s, r) => s + Number(r.valor_gerado), 0);
-  const cxh = horas ? caixas / horas : 0;
+  const minutos = rows.reduce((s, r) => s + Number(r.minutos), 0);
+  const paletes = rows.reduce((s, r) => s + Number(r.paletes_total), 0);
+  const pagamentos = rows.reduce((s, r) => s + Number(r.pagamento_diario), 0);
   const vals = rows.map((r) => Number(r.caixas_por_hora));
   return {
     dias,
     caixas,
-    horas,
-    valor,
-    cxh,
+    paletes,
+    horas: minutos / 60,
+    /** soma dos pagamentos diários oficiais no filtro */
+    pagamentos,
+    /** ACUMULADO NO PERÍODO oficial da última data do filtro */
+    acumulado: last ? Number(last.acumulado_periodo) : 0,
+    /** CX/HH MÉDIA DO PERÍODO oficial da última data do filtro */
+    mediaOficial: last ? Number(last.cxh_media_periodo) : 0,
+    /** caixas ÷ horas no filtro (agregado) */
+    cxh: minutos ? caixas / (minutos / 60) : 0,
     max: vals.length ? Math.max(...vals) : 0,
     min: vals.length ? Math.min(...vals) : 0,
-    mediaDiaria: dias ? valor / dias : 0,
   };
-}
-
-export type Status = "acima" | "dentro" | "abaixo";
-export function goalStatus(cxh: number, cfg?: Pick<Config, "meta_caixas_hora" | "tolerancia_meta"> | null): Status {
-  if (!cfg) return "dentro";
-  const meta = Number(cfg.meta_caixas_hora);
-  const tol = Number(cfg.tolerancia_meta);
-  if (cxh >= meta + tol) return "acima";
-  if (cxh >= meta - tol) return "dentro";
-  return "abaixo";
 }

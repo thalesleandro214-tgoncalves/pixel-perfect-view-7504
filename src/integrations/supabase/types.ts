@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       colaboradores: {
         Row: {
-          cpf: string
+          cpf: string | null
           created_at: string
           demo: boolean
           equipe: string
@@ -24,11 +24,13 @@ export type Database = {
           id: string
           matricula: string | null
           nome: string
+          nome_base: string | null
           status: string
+          unidade: string | null
           user_id: string | null
         }
         Insert: {
-          cpf: string
+          cpf?: string | null
           created_at?: string
           demo?: boolean
           equipe?: string
@@ -36,11 +38,13 @@ export type Database = {
           id?: string
           matricula?: string | null
           nome: string
+          nome_base?: string | null
           status?: string
+          unidade?: string | null
           user_id?: string | null
         }
         Update: {
-          cpf?: string
+          cpf?: string | null
           created_at?: string
           demo?: boolean
           equipe?: string
@@ -48,7 +52,9 @@ export type Database = {
           id?: string
           matricula?: string | null
           nome?: string
+          nome_base?: string | null
           status?: string
+          unidade?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -80,36 +86,141 @@ export type Database = {
         }
         Relationships: []
       }
+      importacoes: {
+        Row: {
+          arquivo: string
+          atualizados: number
+          created_at: string
+          erros: Json
+          id: string
+          inalterados: number
+          inseridos: number
+          invalidos: number
+          total_linhas: number
+          usuario_id: string | null
+        }
+        Insert: {
+          arquivo: string
+          atualizados?: number
+          created_at?: string
+          erros?: Json
+          id?: string
+          inalterados?: number
+          inseridos?: number
+          invalidos?: number
+          total_linhas?: number
+          usuario_id?: string | null
+        }
+        Update: {
+          arquivo?: string
+          atualizados?: number
+          created_at?: string
+          erros?: Json
+          id?: string
+          inalterados?: number
+          inseridos?: number
+          invalidos?: number
+          total_linhas?: number
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
       produtividade: {
         Row: {
+          acumulado_periodo: number
           caixas_por_hora: number
           caixas_produzidas: number
           colaborador_id: string
           created_at: string
+          cx_m: number
+          cxh_media_periodo: number
           data: string
+          duracao_operacao: string | null
           horas_trabalhadas: number
           id: string
+          importacao_id: string | null
+          inicio_montagem: string | null
+          lp_duplo: number
+          minutos: number
+          mistos: number
+          pagamento_diario: number
+          paletes_total: number
+          termino_montagem: string | null
+          total_container: number
+          total_container_rs: number
+          total_gav: number
+          total_gaveta_rs: number
+          total_mistos_lp: number
+          total_mistos_rs: number
+          unidade: string | null
+          valor_container: number
+          valor_gaveta: number
           valor_gerado: number
+          valor_mistos: number
         }
         Insert: {
+          acumulado_periodo?: number
           caixas_por_hora?: number
           caixas_produzidas: number
           colaborador_id: string
           created_at?: string
+          cx_m?: number
+          cxh_media_periodo?: number
           data: string
+          duracao_operacao?: string | null
           horas_trabalhadas: number
           id?: string
+          importacao_id?: string | null
+          inicio_montagem?: string | null
+          lp_duplo?: number
+          minutos?: number
+          mistos?: number
+          pagamento_diario?: number
+          paletes_total?: number
+          termino_montagem?: string | null
+          total_container?: number
+          total_container_rs?: number
+          total_gav?: number
+          total_gaveta_rs?: number
+          total_mistos_lp?: number
+          total_mistos_rs?: number
+          unidade?: string | null
+          valor_container?: number
+          valor_gaveta?: number
           valor_gerado?: number
+          valor_mistos?: number
         }
         Update: {
+          acumulado_periodo?: number
           caixas_por_hora?: number
           caixas_produzidas?: number
           colaborador_id?: string
           created_at?: string
+          cx_m?: number
+          cxh_media_periodo?: number
           data?: string
+          duracao_operacao?: string | null
           horas_trabalhadas?: number
           id?: string
+          importacao_id?: string | null
+          inicio_montagem?: string | null
+          lp_duplo?: number
+          minutos?: number
+          mistos?: number
+          pagamento_diario?: number
+          paletes_total?: number
+          termino_montagem?: string | null
+          total_container?: number
+          total_container_rs?: number
+          total_gav?: number
+          total_gaveta_rs?: number
+          total_mistos_lp?: number
+          total_mistos_rs?: number
+          unidade?: string | null
+          valor_container?: number
+          valor_gaveta?: number
           valor_gerado?: number
+          valor_mistos?: number
         }
         Relationships: [
           {
