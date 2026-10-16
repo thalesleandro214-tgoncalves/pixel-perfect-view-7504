@@ -49,7 +49,7 @@ function Perfil() {
         {[
           ["Matrícula", me?.matricula ?? "—"],
           ["Função", me?.funcao],
-          ["Equipe", me?.equipe],
+          ["Unidade", me?.unidade ?? "—"],
           ["Status", me?.status === "ativo" ? "Ativo" : "Inativo"],
         ].map(([k, v]) => (
           <Panel key={k}>

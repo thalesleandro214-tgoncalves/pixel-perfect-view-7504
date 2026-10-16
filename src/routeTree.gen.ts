@@ -14,7 +14,6 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAuxiliaresRouteImport } from './routes/admin.auxiliares'
-import { Route as AdminConfigRouteImport } from './routes/admin.config'
 import { Route as AdminProdutividadeRouteImport } from './routes/admin.produtividade'
 import { Route as AdminRankingRouteImport } from './routes/admin.ranking'
 import { Route as AppIndexRouteImport } from './routes/app.index'
@@ -45,11 +44,6 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAuxiliaresRoute = AdminAuxiliaresRouteImport.update({
   id: '/auxiliares',
   path: '/auxiliares',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminConfigRoute = AdminConfigRouteImport.update({
-  id: '/config',
-  path: '/config',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProdutividadeRoute = AdminProdutividadeRouteImport.update({
@@ -88,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/admin/auxiliares': typeof AdminAuxiliaresRoute
-  '/admin/config': typeof AdminConfigRoute
   '/admin/produtividade': typeof AdminProdutividadeRoute
   '/admin/ranking': typeof AdminRankingRoute
   '/app/desempenho': typeof AppDesempenhoRoute
@@ -100,7 +93,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/auxiliares': typeof AdminAuxiliaresRoute
-  '/admin/config': typeof AdminConfigRoute
   '/admin/produtividade': typeof AdminProdutividadeRoute
   '/admin/ranking': typeof AdminRankingRoute
   '/app/desempenho': typeof AppDesempenhoRoute
@@ -115,7 +107,6 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
   '/admin/auxiliares': typeof AdminAuxiliaresRoute
-  '/admin/config': typeof AdminConfigRoute
   '/admin/produtividade': typeof AdminProdutividadeRoute
   '/admin/ranking': typeof AdminRankingRoute
   '/app/desempenho': typeof AppDesempenhoRoute
@@ -131,7 +122,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/admin/auxiliares'
-    | '/admin/config'
     | '/admin/produtividade'
     | '/admin/ranking'
     | '/app/desempenho'
@@ -143,7 +133,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin/auxiliares'
-    | '/admin/config'
     | '/admin/produtividade'
     | '/admin/ranking'
     | '/app/desempenho'
@@ -157,7 +146,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/admin/auxiliares'
-    | '/admin/config'
     | '/admin/produtividade'
     | '/admin/ranking'
     | '/app/desempenho'
@@ -210,13 +198,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuxiliaresRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/config': {
-      id: '/admin/config'
-      path: '/config'
-      fullPath: '/admin/config'
-      preLoaderRoute: typeof AdminConfigRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/produtividade': {
       id: '/admin/produtividade'
       path: '/produtividade'
@@ -264,7 +245,6 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAuxiliaresRoute: typeof AdminAuxiliaresRoute
-  AdminConfigRoute: typeof AdminConfigRoute
   AdminProdutividadeRoute: typeof AdminProdutividadeRoute
   AdminRankingRoute: typeof AdminRankingRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -272,7 +252,6 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuxiliaresRoute: AdminAuxiliaresRoute,
-  AdminConfigRoute: AdminConfigRoute,
   AdminProdutividadeRoute: AdminProdutividadeRoute,
   AdminRankingRoute: AdminRankingRoute,
   AdminIndexRoute: AdminIndexRoute,
