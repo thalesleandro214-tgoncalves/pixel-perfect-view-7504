@@ -19,20 +19,6 @@ export function StatCard({ label, value, sub, delay }: { label: string; value: R
   );
 }
 
-const statusMap: Record<Status, { label: string; cls: string; icon: string }> = {
-  acima: { label: "acima da meta", cls: "bg-good/10 text-good ring-good/25", icon: "▲" },
-  dentro: { label: "dentro da meta", cls: "bg-warn/15 text-foreground ring-warn/40", icon: "●" },
-  abaixo: { label: "abaixo da meta", cls: "bg-bad/10 text-bad ring-bad/25", icon: "▼" },
-};
-
-export function StatusPill({ status }: { status: Status }) {
-  const s = statusMap[status];
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1 font-mono text-[10px] font-medium uppercase tracking-[0.15em]", s.cls)}>
-      {s.icon} {s.label}
-    </span>
-  );
-}
 
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (

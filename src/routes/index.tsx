@@ -7,12 +7,11 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { cpfToEmail, formatCpf, isValidCpf } from "@/lib/cpf";
-import { getSetupStatus, setupDemoAccounts } from "@/lib/admin.functions";
+import { createFirstAdmin, getSetupStatus } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DemoBadge } from "@/components/portal/bits";
 import warehouse from "@/assets/warehouse.jpg";
 
 export const Route = createFileRoute("/")({
@@ -36,8 +35,10 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const [forgot, setForgot] = useState(false);
   const statusFn = useServerFn(getSetupStatus);
-  const setupFn = useServerFn(setupDemoAccounts);
+  const setupFn = useServerFn(createFirstAdmin);
+  const [nome, setNome] = useState("");
   const status = useQuery({ queryKey: ["setup-status"], queryFn: () => statusFn() });
+  const first = !!status.data?.needsSetup;
 
   useEffect(() => {
     if (!loading && session && role) navigate({ to: role === "admin" ? "/admin" : "/app", replace: true });
@@ -55,21 +56,22 @@ function Login() {
     }
   };
 
-  const setup = async () => {
+  const setup = async (e: FormEvent) => {
+    e.preventDefault();
+    if (nome.trim().length < 3) return toast.error("Informe seu nome.");
+    if (!isValidCpf(cpf)) return toast.error("CPF inválido.");
+    if (password.length < 8) return toast.error("A senha do administrador precisa de 8+ caracteres.");
     setBusy(true);
     try {
-      const r = await setupFn();
-      toast.success(r.message);
+      await setupFn({ data: { nome: nome.trim(), cpf: cpf.replace(/\D/g, ""), password } });
+      const { error } = await supabase.auth.signInWithPassword({ email: cpfToEmail(cpf), password });
+      if (error) throw error;
+      toast.success("Administrador cadastrado.");
       status.refetch();
-    } catch {
-      toast.error("Não foi possível criar as contas.");
+    } catch (err) {
+      toast.error((err as Error).message || "Não foi possível concluir o cadastro.");
     }
     setBusy(false);
-  };
-
-  const fill = (c: string, p: string) => {
-    setCpf(formatCpf(c));
-    setPassword(p);
   };
 
   return (
@@ -97,9 +99,15 @@ function Login() {
               <div className="label-mono">Brasal · Logística</div>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight">Portal de Produtividade</h1>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground lg:mt-2">Entre com seu CPF e senha.</p>
+            <p className="mt-1 text-sm text-muted-foreground lg:mt-2">{first ? "Primeiro acesso: cadastre o administrador da plataforma." : "Entre com seu CPF e senha."}</p>
 
-            <form onSubmit={submit} className="mt-6 space-y-4">
+            <form onSubmit={first ? setup : submit} className="mt-6 space-y-4">
+              {first && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="nome">Nome completo</Label>
+                  <Input id="nome" value={nome} onChange={(e) => setNome(e.target.value)} className="h-12 text-base" />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="cpf">CPF</Label>
                 <Input id="cpf" inputMode="numeric" autoComplete="username" placeholder="000.000.000-00" value={cpf} onChange={(e) => setCpf(formatCpf(e.target.value))} className="h-12 font-mono text-base" />
@@ -107,39 +115,20 @@ function Login() {
               <div className="space-y-1.5">
                 <Label htmlFor="pw">Senha</Label>
                 <div className="relative">
-                  <Input id="pw" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 pr-11 text-base" />
+                  <Input id="pw" type={show ? "text" : "password"} autoComplete={first ? "new-password" : "current-password"} value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 pr-11 text-base" />
                   <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="Mostrar senha">
                     {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </button>
                 </div>
               </div>
               <Button type="submit" disabled={busy} className="h-12 w-full text-base font-semibold">
-                {busy && <Loader2 className="size-4 animate-spin" />} Entrar
+                {busy && <Loader2 className="size-4 animate-spin" />} {first ? "Cadastrar administrador" : "Entrar"}
               </Button>
-              <button type="button" onClick={() => setForgot(true)} className="w-full text-center text-sm text-primary hover:underline">
+              {!first && <button type="button" onClick={() => setForgot(true)} className="w-full text-center text-sm text-primary hover:underline">
                 Esqueci minha senha
-              </button>
+              </button>}
             </form>
 
-            <div className="mt-6 border-t pt-4">
-              <div className="mb-3 flex justify-center"><DemoBadge /></div>
-              {status.data?.needsSetup ? (
-                <Button variant="outline" className="w-full" disabled={busy} onClick={setup}>
-                  Ativar contas de demonstração
-                </Button>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 text-left">
-                  <button onClick={() => fill("52998224725", "demo1234")} className="rounded-lg bg-muted p-2.5 hover:bg-accent">
-                    <div className="label-mono">Auxiliar</div>
-                    <div className="font-mono text-[11px]">529.982.247-25</div>
-                  </button>
-                  <button onClick={() => fill("11144477735", "admin1234")} className="rounded-lg bg-muted p-2.5 hover:bg-accent">
-                    <div className="label-mono">Gestor</div>
-                    <div className="font-mono text-[11px]">111.444.777-35</div>
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
