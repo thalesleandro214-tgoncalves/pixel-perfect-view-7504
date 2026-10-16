@@ -1,191 +1,92 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Trash2, Upload } from "lucide-react";
-import * as XLSX from "xlsx";
+import { Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Panel, SectionTitle } from "@/components/portal/bits";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useColabs, useProdRange } from "@/lib/admin-data";
-import { useConfig } from "@/lib/data";
-import { brl, dmy, isoDate, num, todayIso } from "@/lib/format";
-import { isValidCpf, onlyDigits } from "@/lib/cpf";
+import { parseBase, type ErroLinha } from "@/lib/base-oficial";
+import { importarBase } from "@/lib/admin.functions";
 
-export const Route = createFileRoute("/admin/produtividade")({ component: Produtividade });
+export const Route = createFileRoute("/admin/produtividade")({ component: Importar });
 
-type Parsed = { linha: number; data: string; cpf: string; nome: string; horas: number; caixas: number; colabId?: string; erro?: string };
+type Prev = { arquivo: string; conteudo: string; validas: number; erros: ErroLinha[]; periodo: string };
+type Res = { inseridos: number; atualizados: number; inalterados: number; invalidos: number; erros: ErroLinha[]; novosColaboradores: number };
 
-const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
-
-function parseDate(v: unknown): string | null {
-  if (v instanceof Date && !isNaN(v.getTime())) return isoDate(v);
-  if (typeof v === "number") {
-    const d = XLSX.SSF.parse_date_code(v);
-    return d ? `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}` : null;
-  }
-  const s = String(v ?? "").trim();
-  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
-  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
-}
-const toNum = (v: unknown) => (typeof v === "number" ? v : Number(String(v ?? "").replace(/\./g, "").replace(",", ".")));
-
-function Produtividade() {
-  const colabs = useColabs().data ?? [];
-  const cfg = useConfig().data;
+function Importar() {
   const qc = useQueryClient();
-  const recent = useProdRange(isoDate(new Date(Date.now() - 6 * 864e5)), todayIso()).data ?? [];
-  const [f, setF] = useState({ colab: "", data: todayIso(), horas: "8", caixas: "" });
-  const [preview, setPreview] = useState<Parsed[] | null>(null);
+  const fn = useServerFn(importarBase);
+  const [prev, setPrev] = useState<Prev | null>(null);
+  const [res, setRes] = useState<Res | null>(null);
   const [busy, setBusy] = useState(false);
+  const hist = useQuery({
+    queryKey: ["importacoes"],
+    queryFn: async () => (await supabase.from("importacoes").select("*").order("created_at", { ascending: false }).limit(10)).data ?? [],
+  });
 
-  const refresh = () => qc.invalidateQueries();
-
-  const lancar = async () => {
-    const horas = toNum(f.horas);
-    const caixas = Math.round(toNum(f.caixas));
-    if (!f.colab) return toast.error("Escolha o auxiliar.");
-    if (!(horas > 0 && horas <= 24) || !(caixas >= 0)) return toast.error("Horas/caixas inválidas.");
-    const { error } = await supabase.from("produtividade").upsert(
-      { colaborador_id: f.colab, data: f.data, horas_trabalhadas: horas, caixas_produzidas: caixas },
-      { onConflict: "colaborador_id,data" },
-    );
-    if (error) return toast.error(error.message);
-    toast.success(`Lançado: ${(caixas / horas).toFixed(1)} cx/h`);
-    setF({ ...f, caixas: "" });
-    refresh();
+  const onFile = async (f?: File) => {
+    if (!f) return;
+    const conteudo = await f.text();
+    const { linhas, erros } = parseBase(conteudo);
+    const datas = linhas.map((l) => l.data).sort();
+    setRes(null);
+    setPrev({ arquivo: f.name, conteudo, validas: linhas.length, erros, periodo: datas.length ? `${datas[0]} a ${datas[datas.length - 1]}` : "—" });
   };
 
-  const onFile = async (file: File) => {
-    const wb = XLSX.read(await file.arrayBuffer(), { cellDates: true });
-    const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-    const rows: Parsed[] = raw.slice(0, 5000).map((r, i) => {
-      const g = (k: string) => Object.entries(r).find(([h]) => norm(h) === k)?.[1];
-      const cpf = onlyDigits(String(g("cpf") ?? "")).padStart(11, "0");
-      const data = parseDate(g("data"));
-      const horas = toNum(g("horastrabalhadas") ?? g("horas"));
-      const caixas = toNum(g("caixasproduzidas") ?? g("caixas"));
-      const colab = colabs.find((c) => c.cpf === cpf);
-      let erro: string | undefined;
-      if (!data) erro = "Data inválida";
-      else if (!isValidCpf(cpf)) erro = "CPF inválido";
-      else if (!colab) erro = "CPF não cadastrado";
-      else if (!(horas > 0 && horas <= 24)) erro = "Horas inválidas";
-      else if (!(caixas >= 0)) erro = "Caixas inválidas";
-      return { linha: i + 2, data: data ?? "", cpf, nome: colab?.nome ?? String(g("nome") ?? ""), horas, caixas: Math.round(caixas), colabId: colab?.id, erro };
-    });
-    setPreview(rows);
-  };
-
-  const confirmar = async () => {
-    const ok = preview!.filter((r) => !r.erro);
+  const importar = async () => {
+    if (!prev) return;
     setBusy(true);
-    const { error } = await supabase.from("produtividade").upsert(
-      ok.map((r) => ({ colaborador_id: r.colabId!, data: r.data, horas_trabalhadas: r.horas, caixas_produzidas: r.caixas })),
-      { onConflict: "colaborador_id,data" },
-    );
+    try {
+      const r = await fn({ data: { arquivo: prev.arquivo, conteudo: prev.conteudo } });
+      setRes(r);
+      toast.success("Base importada.");
+      qc.invalidateQueries();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
     setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(`${ok.length} registros importados.`);
-    setPreview(null);
-    refresh();
   };
-
-  const modelo = () => {
-    const ws = XLSX.utils.aoa_to_sheet([["Data", "CPF", "Nome", "Horas Trabalhadas", "Caixas Produzidas"], ["01/10/2026", "52998224725", "Carlos Silva", 8, 736]]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Produtividade");
-    XLSX.writeFile(wb, "modelo_produtividade.xlsx");
-  };
-
-  const remover = async (id: string) => {
-    const { error } = await supabase.from("produtividade").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    refresh();
-  };
-
-  const valid = preview?.filter((r) => !r.erro).length ?? 0;
-  const prevCxh = toNum(f.horas) > 0 && f.caixas ? toNum(f.caixas) / toNum(f.horas) : 0;
 
   return (
     <>
-      <h1 className="pt-5 text-xl font-semibold tracking-tight lg:text-2xl">Lançar produtividade</h1>
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <Panel className="space-y-3">
-          <div className="label-mono">Lançamento manual</div>
-          <Select value={f.colab} onValueChange={(v) => setF({ ...f, colab: v })}>
-            <SelectTrigger><SelectValue placeholder="Auxiliar" /></SelectTrigger>
-            <SelectContent>{colabs.filter((c) => c.status === "ativo").map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}</SelectContent>
-          </Select>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-1"><Label>Data</Label><Input type="date" value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Horas</Label><Input inputMode="decimal" value={f.horas} onChange={(e) => setF({ ...f, horas: e.target.value })} /></div>
-            <div className="space-y-1"><Label>Caixas</Label><Input inputMode="numeric" value={f.caixas} onChange={(e) => setF({ ...f, caixas: e.target.value })} /></div>
+      <h1 className="pt-5 text-xl font-semibold tracking-tight lg:text-2xl">Importar base oficial</h1>
+      <Panel className="mt-4 space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Envie o CSV oficial (separado por “;”, 24 colunas). Cada registro é identificado por colaborador + data: reenviar o mesmo arquivo não duplica nada, e correções atualizam o registro existente.
+        </p>
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-6 text-sm hover:bg-accent">
+          <Upload className="size-4" /> {prev ? prev.arquivo : "Escolher arquivo CSV"}
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+        </label>
+        {prev && (
+          <div className="space-y-2 text-sm">
+            <div className="font-mono text-xs">{prev.validas} linhas válidas · {prev.erros.length} inválidas · período {prev.periodo}</div>
+            <Button onClick={importar} disabled={busy || !prev.validas}>{busy && <Loader2 className="size-4 animate-spin" />} Importar</Button>
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-accent p-3 text-accent-foreground">
-            <span className="font-mono text-xs">{prevCxh.toFixed(1)} cx/h</span>
-            <span className="font-mono text-xs">≈ {brl(toNum(f.caixas || "0") * Number(cfg?.valor_por_caixa ?? 0))}</span>
+        )}
+        {res && (
+          <div className="rounded-xl bg-accent p-3 font-mono text-xs text-accent-foreground">
+            {res.inseridos} novos · {res.atualizados} atualizados · {res.inalterados} sem alteração · {res.invalidos} inválidos · {res.novosColaboradores} colaboradores novos
           </div>
-          <Button onClick={lancar} className="w-full">Salvar lançamento</Button>
-        </Panel>
-
-        <Panel className="space-y-3">
-          <div className="label-mono">Importar Excel / CSV</div>
-          <p className="text-sm text-muted-foreground">Colunas: Data, CPF, Nome, Horas Trabalhadas, Caixas Produzidas. Caixas/hora e valor são calculados automaticamente.</p>
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary/30 p-6 text-center hover:bg-accent">
-            <Upload className="size-6 text-primary" />
-            <span className="text-sm font-medium">Escolher arquivo .xlsx ou .csv</span>
-            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
-          </label>
-          <Button variant="outline" onClick={modelo} className="w-full">Baixar planilha modelo</Button>
-        </Panel>
-      </div>
-
-      {preview && (
-        <>
-          <SectionTitle right={<span className="font-mono text-[10px]">{valid} válidas · {preview.length - valid} com erro</span>}>Prévia da importação</SectionTitle>
-          <Panel className="max-h-96 overflow-auto p-0">
-            <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-muted"><tr className="text-left">{["Linha", "Data", "CPF", "Nome", "Horas", "Caixas", "Status"].map((h) => <th key={h} className="label-mono px-3 py-2 font-normal">{h}</th>)}</tr></thead>
-              <tbody>
-                {preview.map((r) => (
-                  <tr key={r.linha} className="border-t">
-                    <td className="px-3 py-2 font-mono">{r.linha}</td>
-                    <td className="px-3 py-2">{r.data && dmy(r.data)}</td>
-                    <td className="px-3 py-2 font-mono">{r.cpf}</td>
-                    <td className="px-3 py-2">{r.nome}</td>
-                    <td className="px-3 py-2 font-mono">{r.horas}</td>
-                    <td className="px-3 py-2 font-mono">{r.caixas}</td>
-                    <td className={`px-3 py-2 font-medium ${r.erro ? "text-bad" : "text-good"}`}>{r.erro ?? "OK"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Panel>
-          <div className="mt-3 flex gap-2">
-            <Button onClick={confirmar} disabled={!valid || busy}>Confirmar importação ({valid})</Button>
-            <Button variant="outline" onClick={() => setPreview(null)}>Cancelar</Button>
+        )}
+        {!!(res?.erros ?? prev?.erros)?.length && (
+          <div className="max-h-60 overflow-auto rounded-xl border p-3 font-mono text-[11px]">
+            {(res?.erros ?? prev!.erros).map((e) => <div key={e.linha}>Linha {e.linha}: {e.erro}</div>)}
           </div>
-        </>
-      )}
+        )}
+      </Panel>
 
-      <SectionTitle>Últimos 7 dias</SectionTitle>
+      <SectionTitle>Últimas importações</SectionTitle>
       <div className="space-y-2">
-        {[...recent].reverse().slice(0, 40).map((r) => (
-          <Panel key={r.id} className="flex items-center gap-3 py-3">
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{colabs.find((c) => c.id === r.colaborador_id)?.nome}</div>
-              <div className="font-mono text-[10px] text-foreground/50">{dmy(r.data)} · {Number(r.horas_trabalhadas)}h · {num(r.caixas_produzidas)} cx · {brl(Number(r.valor_gerado))}</div>
-            </div>
-            <span className="font-mono text-sm font-semibold">{Number(r.caixas_por_hora)}</span>
-            <Button size="icon" variant="ghost" onClick={() => remover(r.id)} aria-label="Excluir"><Trash2 className="size-4" /></Button>
+        {(hist.data ?? []).map((h) => (
+          <Panel key={h.id} className="font-mono text-[11px]">
+            <div className="font-sans text-sm font-semibold">{h.arquivo}</div>
+            {new Date(h.created_at).toLocaleString("pt-BR")} · {h.total_linhas} linhas · {h.inseridos} novos · {h.atualizados} atualizados · {h.inalterados} iguais · {h.invalidos} inválidos
           </Panel>
         ))}
+        {!hist.data?.length && <Panel className="text-center text-sm text-muted-foreground">Nenhuma importação ainda.</Panel>}
       </div>
     </>
   );

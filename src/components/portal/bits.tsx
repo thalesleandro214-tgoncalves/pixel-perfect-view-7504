@@ -1,15 +1,5 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import type { Status } from "@/lib/data";
-
-export function DemoBadge() {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-dashed border-foreground/20 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-foreground/60">
-      <span className="size-1.5 bg-primary" />
-      Dados demonstrativos
-    </span>
-  );
-}
 
 export function Panel({ className, children, delay = 0 }: { className?: string; children: ReactNode; delay?: number }) {
   return (

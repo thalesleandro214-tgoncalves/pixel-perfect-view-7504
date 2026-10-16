@@ -67,7 +67,7 @@ function Auxiliares() {
     }
   };
 
-  const list = colabs.filter((c) => (c.nome + c.cpf + c.equipe).toLowerCase().includes(q.toLowerCase()));
+  const list = colabs.filter((c) => (c.nome + (c.cpf ?? "") + (c.unidade ?? "") + (c.matricula ?? "")).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <>
@@ -81,12 +81,12 @@ function Auxiliares() {
           <Panel key={c.id} className="flex items-center gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent font-semibold text-accent-foreground">{c.nome[0]}</div>
             <div className="min-w-0 flex-1">
-              <div className="truncate font-semibold">{c.nome} {c.demo && <span className="ml-1 font-mono text-[9px] uppercase text-foreground/40">demo</span>}</div>
-              <div className="truncate font-mono text-[10px] text-foreground/50">{formatCpf(c.cpf)} · {c.equipe} · {c.user_id ? "com acesso" : "sem senha"}</div>
+              <div className="truncate font-semibold">{c.nome} </div>
+              <div className="truncate font-mono text-[10px] text-foreground/50">{c.cpf ? formatCpf(c.cpf) : "sem CPF"} · {c.unidade ?? c.equipe} · {c.user_id ? "com acesso" : "sem senha"}</div>
             </div>
             <Switch checked={c.status === "ativo"} onCheckedChange={(v) => toggle(c, v)} aria-label="Ativo" />
             <Button size="icon" variant="ghost" onClick={() => setPwFor(c)} aria-label="Senha"><KeyRound className="size-4" /></Button>
-            <Button size="icon" variant="ghost" onClick={() => setForm({ id: c.id, nome: c.nome, cpf: formatCpf(c.cpf), matricula: c.matricula ?? "", funcao: c.funcao, equipe: c.equipe })} aria-label="Editar"><Pencil className="size-4" /></Button>
+            <Button size="icon" variant="ghost" onClick={() => setForm({ id: c.id, nome: c.nome, cpf: c.cpf ? formatCpf(c.cpf) : "", matricula: c.matricula ?? "", funcao: c.funcao, equipe: c.equipe })} aria-label="Editar"><Pencil className="size-4" /></Button>
           </Panel>
         ))}
       </div>
