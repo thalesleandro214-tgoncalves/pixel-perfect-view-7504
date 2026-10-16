@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Area, AreaChart, CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Prod } from "@/lib/data";
 import { brl, dm, dmy, num } from "@/lib/format";
 
@@ -7,13 +7,14 @@ const axis = { fontSize: 10, fontFamily: "JetBrains Mono", fill: "var(--muted-fo
 
 function DayDetail({ r }: { r: Prod }) {
   return (
-    <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-accent p-3 text-accent-foreground sm:grid-cols-5">
+    <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-accent p-3 text-accent-foreground sm:grid-cols-6">
       {[
         ["Data", dmy(r.data)],
-        ["Horas", `${Number(r.horas_trabalhadas)}h`],
+        ["Operação", r.duracao_operacao ?? "—"],
         ["Caixas", num(r.caixas_produzidas)],
-        ["Cx/hora", `${Number(r.caixas_por_hora)}`],
-        ["Valor", brl(Number(r.valor_gerado))],
+        ["Paletes", num(Number(r.paletes_total))],
+        ["CX/H", `${Number(r.caixas_por_hora)}`],
+        ["Pagamento", brl(Number(r.pagamento_diario))],
       ].map(([k, v]) => (
         <div key={k}>
           <div className="font-mono text-[9px] uppercase tracking-[0.15em] opacity-70">{k}</div>
@@ -24,9 +25,9 @@ function DayDetail({ r }: { r: Prod }) {
   );
 }
 
-export function ProdLineChart({ rows, meta, height = 180, interactive = true }: { rows: Prod[]; meta?: number; height?: number; interactive?: boolean }) {
+export function ProdLineChart({ rows, height = 180, interactive = true }: { rows: Prod[]; height?: number; interactive?: boolean }) {
   const [sel, setSel] = useState<Prod | null>(null);
-  const data = rows.map((r) => ({ ...r, d: dm(r.data), v: Number(r.caixas_por_hora) }));
+  const data = rows.map((r) => ({ d: dm(r.data), v: Number(r.caixas_por_hora) }));
   return (
     <div>
       <ResponsiveContainer width="100%" height={height}>
@@ -41,7 +42,6 @@ export function ProdLineChart({ rows, meta, height = 180, interactive = true }: 
           <CartesianGrid stroke="var(--border)" vertical={false} />
           <XAxis dataKey="d" tick={axis} tickLine={false} axisLine={false} minTickGap={16} />
           <YAxis tick={axis} tickLine={false} axisLine={false} domain={["dataMin - 8", "dataMax + 8"]} />
-          {meta && <ReferenceLine y={meta} stroke="var(--foreground)" strokeOpacity={0.3} strokeDasharray="4 4" />}
           <Tooltip
             cursor={{ stroke: "var(--primary)", strokeOpacity: 0.3 }}
             contentStyle={{ borderRadius: 12, border: "1px solid var(--border)", fontSize: 12 }}
