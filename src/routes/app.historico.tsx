@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Empty } from "@/components/portal/bits";
 import { MonthPicker } from "@/components/portal/MonthPicker";
-import { goalStatus } from "@/lib/data";
 import { brl, currentMonth, dmy, num } from "@/lib/format";
 import { useMyMonth } from "@/lib/use-my-month";
 
@@ -10,12 +9,8 @@ export const Route = createFileRoute("/app/historico")({ component: Historico })
 
 function Historico() {
   const [ym, setYm] = useState(currentMonth());
-  const { cfg, rows, loading } = useMyMonth(ym);
+  const { rows, loading } = useMyMonth(ym);
   const list = [...rows].reverse();
-  const color = (v: number) => {
-    const s = goalStatus(v, cfg);
-    return s === "acima" ? "text-good" : s === "abaixo" ? "text-bad" : "text-foreground";
-  };
 
   return (
     <>
@@ -28,28 +23,27 @@ function Historico() {
           <Empty>Nenhum registro neste mês.</Empty>
         ) : (
           <>
-            {/* Mobile cards */}
             <div className="space-y-2.5 md:hidden">
               {list.map((r) => (
                 <div key={r.id} className="glass p-4">
                   <div className="flex items-center justify-between">
                     <div className="font-semibold">{dmy(r.data)}</div>
-                    <div className={`num-display text-2xl ${color(Number(r.caixas_por_hora))}`}>{Number(r.caixas_por_hora)} <span className="font-mono text-[10px]">cx/h</span></div>
+                    <div className="num-display text-2xl">{Number(r.caixas_por_hora)} <span className="font-mono text-[10px]">cx/h</span></div>
                   </div>
-                  <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-[11px] text-foreground/60">
-                    <span>{Number(r.horas_trabalhadas)}h</span>
-                    <span>{num(r.caixas_produzidas)} cx</span>
-                    <span className="text-right font-medium text-foreground">{brl(Number(r.valor_gerado))}</span>
+                  <div className="mt-2 grid grid-cols-2 gap-2 font-mono text-[11px] text-foreground/60">
+                    <span>{r.duracao_operacao} de operação</span>
+                    <span>{num(r.caixas_produzidas)} cx · {num(Number(r.paletes_total))} pal.</span>
+                    <span>Dia: <b className="text-foreground">{brl(Number(r.pagamento_diario))}</b></span>
+                    <span>Acum.: <b className="text-foreground">{brl(Number(r.acumulado_periodo))}</b></span>
                   </div>
                 </div>
               ))}
             </div>
-            {/* Desktop table */}
-            <div className="glass hidden overflow-hidden md:block">
+            <div className="glass hidden overflow-x-auto md:block">
               <table className="w-full text-sm">
                 <thead className="bg-muted/60">
                   <tr className="text-left">
-                    {["Data", "Horas", "Caixas", "Caixas/hora", "Valor do dia"].map((h) => (
+                    {["Data", "Operação", "Caixas", "Paletes", "CX/H", "Gratificação", "Acumulado"].map((h) => (
                       <th key={h} className="label-mono px-4 py-3 font-normal">{h}</th>
                     ))}
                   </tr>
@@ -58,10 +52,12 @@ function Historico() {
                   {list.map((r) => (
                     <tr key={r.id} className="border-t">
                       <td className="px-4 py-3 font-medium">{dmy(r.data)}</td>
-                      <td className="px-4 py-3 font-mono">{Number(r.horas_trabalhadas)}h</td>
+                      <td className="px-4 py-3 font-mono">{r.duracao_operacao}</td>
                       <td className="px-4 py-3 font-mono">{num(r.caixas_produzidas)}</td>
-                      <td className={`px-4 py-3 font-mono font-semibold ${color(Number(r.caixas_por_hora))}`}>{Number(r.caixas_por_hora)}</td>
-                      <td className="px-4 py-3 font-mono">{brl(Number(r.valor_gerado))}</td>
+                      <td className="px-4 py-3 font-mono">{num(Number(r.paletes_total))}</td>
+                      <td className="px-4 py-3 font-mono font-semibold">{Number(r.caixas_por_hora)}</td>
+                      <td className="px-4 py-3 font-mono">{brl(Number(r.pagamento_diario))}</td>
+                      <td className="px-4 py-3 font-mono">{brl(Number(r.acumulado_periodo))}</td>
                     </tr>
                   ))}
                 </tbody>

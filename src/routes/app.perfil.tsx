@@ -42,14 +42,14 @@ function Perfil() {
         </div>
         <div className="min-w-0">
           <div className="truncate text-lg font-semibold">{me?.nome}</div>
-          <div className="font-mono text-[11px] text-foreground/50">{me ? formatCpf(me.cpf) : ""}</div>
+          <div className="font-mono text-[11px] text-foreground/50">{me?.cpf ? formatCpf(me.cpf) : ""}</div>
         </div>
       </Panel>
       <div className="mt-3 grid grid-cols-2 gap-3">
         {[
           ["Matrícula", me?.matricula ?? "—"],
           ["Função", me?.funcao],
-          ["Equipe", me?.equipe],
+          ["Unidade", me?.unidade ?? "—"],
           ["Status", me?.status === "ativo" ? "Ativo" : "Inativo"],
         ].map(([k, v]) => (
           <Panel key={k}>

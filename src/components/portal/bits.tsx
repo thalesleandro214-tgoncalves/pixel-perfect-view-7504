@@ -1,15 +1,5 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import type { Status } from "@/lib/data";
-
-export function DemoBadge() {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-dashed border-foreground/20 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.2em] text-foreground/60">
-      <span className="size-1.5 bg-primary" />
-      Dados demonstrativos
-    </span>
-  );
-}
 
 export function Panel({ className, children, delay = 0 }: { className?: string; children: ReactNode; delay?: number }) {
   return (
@@ -29,20 +19,6 @@ export function StatCard({ label, value, sub, delay }: { label: string; value: R
   );
 }
 
-const statusMap: Record<Status, { label: string; cls: string; icon: string }> = {
-  acima: { label: "acima da meta", cls: "bg-good/10 text-good ring-good/25", icon: "▲" },
-  dentro: { label: "dentro da meta", cls: "bg-warn/15 text-foreground ring-warn/40", icon: "●" },
-  abaixo: { label: "abaixo da meta", cls: "bg-bad/10 text-bad ring-bad/25", icon: "▼" },
-};
-
-export function StatusPill({ status }: { status: Status }) {
-  const s = statusMap[status];
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ring-1 font-mono text-[10px] font-medium uppercase tracking-[0.15em]", s.cls)}>
-      {s.icon} {s.label}
-    </span>
-  );
-}
 
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
