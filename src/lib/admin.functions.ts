@@ -135,7 +135,7 @@ export const importarBase = createServerFn({ method: "POST" })
     for (let i = 0; i < ids.length; i += 50) {
       const { data: ex, error } = await db.from("produtividade").select(`colaborador_id,data,${CAMPOS.join(",")}`).in("colaborador_id", ids.slice(i, i + 50)).limit(20000);
       if (error) throw new Error(error.message);
-      for (const r of (ex ?? []) as unknown as Record<string, unknown>[]) existentes.set(`${r.colaborador_id}|${r.data}`, r);
+      for (const r of (ex ?? []) as unknown as Record<string, unknown>[]) existentes.set(`${r["colaborador_id"]}|${r["data"]}`, r);
     }
 
     const { data: imp } = await db.from("importacoes").insert({ arquivo: data.arquivo, usuario_id: context.userId, total_linhas: linhas.length + erros.length }).select("id").single();
