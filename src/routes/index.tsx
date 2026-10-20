@@ -82,7 +82,7 @@ function Login() {
         <div className="absolute inset-x-0 bottom-0 p-12 text-primary-foreground">
           <div className="stripe-top mb-6 h-1 w-40 opacity-90" style={{ background: "repeating-linear-gradient(90deg, var(--primary-foreground) 0 16px, transparent 16px 28px)" }} />
           <h2 className="num-display text-6xl uppercase">Cada caixa<br />conta.</h2>
-          <p className="mt-4 max-w-sm text-sm opacity-85">Sua produtividade do dia, do mês e sua meta — em um só lugar.</p>
+          <p className="mt-4 max-w-sm text-sm opacity-85">Sua produtividade do dia e do mês — em um só lugar.</p>
         </div>
       </div>
 
